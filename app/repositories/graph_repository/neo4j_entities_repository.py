@@ -1,10 +1,7 @@
 from typing import Dict, List, Optional
-import os
-from kafka import KafkaConsumer
-import json
 
 from app.config.neo4j_config.neo4j_connection import driver
-from app.repositories.memgraph_repository.neo4j_queries_repository import (
+from app.repositories.graph_repository.neo4j_queries_repository import (
     get_create_constraints_queries, get_create_nodes_query, get_create_relationships_query
 )
 
