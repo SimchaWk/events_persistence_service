@@ -1,18 +1,17 @@
 import json
 import os
-from types import FunctionType
 from dotenv import load_dotenv
 from kafka import KafkaConsumer
 
 load_dotenv(verbose=True)
 
 
-def consume(topic: str, function: FunctionType, mode='latest'):
-    consumer = KafkaConsumer(
+def create_kafka_consumer(topic: str) -> KafkaConsumer:
+    return KafkaConsumer(
         topic,
         bootstrap_servers=os.environ['BOOTSTRAP_SERVERS'],
         value_deserializer=lambda v: json.loads(v.decode('utf-8')),
-        auto_offset_reset=mode
+        group_id='terror_events_group',
+        auto_offset_reset='earliest',
+        enable_auto_commit=False
     )
-    for message in consumer:
-        function(message.value)
