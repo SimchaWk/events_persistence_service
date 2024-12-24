@@ -3,6 +3,8 @@ from flask import Flask
 from app.routes.elasticsearch_routes import elastic_bp
 from app.routes.graph_routes import graph_bp
 from app.routes.terror_events_routes import event_bp
+from app.services.consume_kafka_service import consume_real_time_for_mongo_and_elastic
+from app.utils.process_utils import run_parallel
 
 
 def run_flask():
@@ -13,5 +15,11 @@ def run_flask():
     app.run()
 
 
+STARTUP_TASKS = [
+    run_flask,
+    consume_real_time_for_mongo_and_elastic()
+]
+
+
 if __name__ == '__main__':
-    run_flask()
+    run_parallel(STARTUP_TASKS)

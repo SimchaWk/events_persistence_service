@@ -1,6 +1,8 @@
 import json
 import os
+import time
 from datetime import datetime, UTC
+from functools import partial
 from typing import List
 
 from app.config.elastic_config.elastic_connection import elastic_client
@@ -18,30 +20,24 @@ from app.repositories.graph_repository.networkx_graph_repository import (
 from app.services.storage_service import save_terror_events_to_mongo
 
 
-def process_kafka_messages(
-        topic: str,
-        batch_size: int = 100,
-        save_fns: List[callable] = None
-) -> None:
+def process_kafka_messages(topic: str, batch_size: int = 100, save_fns: List[callable] = None, timeout_seconds: int = 60) -> None:
     consumer = create_kafka_consumer(topic)
     batch = []
+    last_save = time.time()
 
     try:
         for message in consumer:
             try:
-                event = (
-                    json.loads(message.value)
-                    if isinstance(message.value, str)
-                    else message.value
-                )
-
+                event = json.loads(message.value) if isinstance(message.value, str) else message.value
                 event['received_at'] = datetime.now(UTC).isoformat()
                 batch.append(event)
 
-                if len(batch) >= batch_size:
+                current_time = time.time()
+                if len(batch) >= batch_size or (current_time - last_save) >= timeout_seconds:
                     [save_fn(batch) for save_fn in save_fns]
                     consumer.commit()
                     batch = []
+                    last_save = current_time
 
             except json.JSONDecodeError as e:
                 print(f"Error decoding message: {e}")
@@ -55,9 +51,7 @@ def process_kafka_messages(
         consumer.close()
 
 
-def consume_for_mongo_and_elastic():
-    KAFKA_TOPIC = os.environ['TERROR_EVENTS']
-    BATCH_SIZE = 100
+def consume_for_mongo_and_elastic(topic_name: str, batch_size: int = 100) -> None:
 
     setup_terror_events_index(elastic_client)
 
@@ -67,10 +61,24 @@ def consume_for_mongo_and_elastic():
     ]
 
     process_kafka_messages(
-        topic=KAFKA_TOPIC,
-        batch_size=BATCH_SIZE,
+        topic=topic_name,
+        batch_size=batch_size,
         save_fns=save_functions
     )
+
+
+consume_real_time_for_mongo_and_elastic = partial(
+    consume_for_mongo_and_elastic,
+    topic_name=os.environ['TERROR_EVENTS'],
+    batch_size=50
+)
+
+
+consume_history_for_mongo_and_elastic = partial(
+    consume_for_mongo_and_elastic,
+    topic_name=os.environ['API_TERROR_EVENTS'],
+    batch_size=100
+)
 
 
 def consume_for_neo4j():
@@ -118,6 +126,6 @@ def consume_for_networkx():
 
 
 if __name__ == "__main__":
-    consume_for_mongo_and_elastic()
+    consume_history_for_mongo_and_elastic()
     # consume_for_neo4j()
     pass

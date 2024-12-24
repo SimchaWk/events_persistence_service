@@ -72,7 +72,7 @@ def query_casualties_by_region(top_n: Optional[int] = None) -> List[Dict[str, An
 def query_top_terrorist_groups(top_n: Optional[int] = None) -> List[Dict[str, Any]]:
     pipeline = [
         {
-            '$unwind': '$terror_groups'  # Unwind the terror groups array
+            '$unwind': '$terror_groups'
         },
         {
             '$match': {
@@ -102,10 +102,10 @@ def query_top_terrorist_groups(top_n: Optional[int] = None) -> List[Dict[str, An
 def query_attack_type_target_correlation() -> List[Dict[str, Any]]:
     pipeline = [
         {
-            '$unwind': '$attack_types'  # Unwind the attack types array
+            '$unwind': '$attack_types'
         },
         {
-            '$unwind': '$target_details'  # Unwind the target details array
+            '$unwind': '$target_details'
         },
         {
             '$group': {
@@ -229,7 +229,6 @@ def query_attack_change_by_region(top_n: Optional[int] = None) -> List[Dict[str,
 # 7 -
 def query_terror_heatmap_data(time_period: str = 'year', start_year: int = 1970) -> List[Dict[str, Any]]:
 
-    # חישוב טווח השנים בהתאם לפרמטרים
     year_ranges = {
         'year': 1,
         '3_years': 3,
